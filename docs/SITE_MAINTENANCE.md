@@ -56,8 +56,9 @@ study totals. It uses `feature`, the complete canonical association key, rather
 than the nullable AutoInterp-join metadata field `feature_id`.
 
 The local manuscript PDF supplies a checksum only. It is **not copied or
-published**. The Paper button stays marked forthcoming until a public preprint
-URL is provided. Update the button, citation and sharing metadata when it is.
+published**. The Paper button and citation link to the public preprint at
+https://arxiv.org/abs/2611.08922. The site sharing metadata identifies this paper
+as its source.
 
 ## Browser verification
 

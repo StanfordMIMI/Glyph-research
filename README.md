@@ -4,6 +4,8 @@ Project website and evidence review for **Glyph: An Interpretability Engine for 
 
 ## Explore
 
+- [Read the paper · arXiv:2611.08922](https://arxiv.org/abs/2611.08922)
+
 - [Interactive research website](https://stanfordmimi.github.io/Glyph-research/)
 - [Evidence review](docs/evidence/)
 - [Figures](docs/figures/)
