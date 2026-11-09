@@ -92,8 +92,8 @@ repositories and that the deployed site is publicly accessible. Do not change
 repository visibility as a side effect of publishing.
 
 The landing page is the public-facing research atlas, not a claim that all of the
-original research pipeline has already been released. The existing evidence
-reviews are retained as earlier exploratory material and linked accordingly.
+original research pipeline has already been released. Outdated exploratory evidence reviews and standalone figure drafts are excluded
+from the published site.
 
 
 The interactive risk wheels follow `Analysis/run/subfigures/common.py` in the

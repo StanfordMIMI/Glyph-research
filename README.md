@@ -1,14 +1,12 @@
 # Glyph research
 
-Project website and evidence review for **Glyph: An Interpretability Engine for AI-Driven Scientific Discovery in Clinical Data**.
+Project website for **Glyph: An Interpretability Engine for AI-Driven Scientific Discovery in Clinical Data**.
 
 ## Explore
 
 - [Read the paper · arXiv:2611.08922](https://arxiv.org/abs/2611.08922)
 
 - [Interactive research website](https://stanfordmimi.github.io/Glyph-research/)
-- [Evidence review](docs/evidence/)
-- [Figures](docs/figures/)
 
 ## Related resources
 
