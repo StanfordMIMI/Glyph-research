@@ -145,7 +145,7 @@ const NS='http://www.w3.org/2000/svg',S=1000,BASE_NODE_OPACITY=1;'''
     style=(ROOT/'scripts/atlas-theme.css').read_text()
     adapter=(ROOT/'scripts/atlas-adapter.js').read_text()
     html=template.replace('__GLYPH_DATA__',packed)
-    html=html.replace('</head>','<style>'+style+'</style></head>')
+    html=html.replace('</head>','<style>'+style+'</style><script defer src="assets/analytics.js"></script></head>')
     html=html.replace('</body>','<script>'+adapter+'</script></body>')
     html='<!-- Interactive renderer adapted from Glyph. MIT license: assets/glyph-renderer-license.txt -->\n'+html
     (ROOT/'docs/atlas.html').write_text(html)

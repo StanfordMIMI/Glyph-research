@@ -268,3 +268,21 @@ network. Clinical variables are searchable by name and aliases, with exact
 names ranked ahead of incidental description matches. Scrolling headings and
 prompt disease names use the same outcome hues as the network. Region labels
 are positioned against the nearest curved boundary at display time.
+
+## Private website analytics
+
+Pageviews are sent to GoatCounter by `assets/analytics.js` only on the published
+`stanfordmimi.github.io/Glyph-research/` site. The iframe does not send a second
+pageview. Local previews and browsers requesting Do Not Track or Global Privacy
+Control do not load the service. Page paths omit query strings and fragments;
+referrers are reduced to their origin. No concept searches or click events are
+collected. Browser blockers may suppress visits, so these are approximate counts.
+
+Maintainers sign in at https://robbieholland.goatcounter.com/ to view traffic.
+The account owner must verify the signup email and keep **Settings → Dashboard
+viewable by → Logged in users**. Dashboard privacy is an account setting, not a
+property of the public tracking identifier. No password or API token belongs in
+the repository. Statistics start after deployment and cannot recover old visits.
+
+Local browser checks still make no external analytics requests. Production tests
+should intercept the script/count requests rather than create artificial visits.
