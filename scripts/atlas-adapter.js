@@ -1,5 +1,37 @@
 // Research-site adapter around Glyph's reusable standalone explorer.
 // Coordinates and edges are immutable exports; all interactions are display-only.
+// Wheel hints use only our accessible tooltip, placed away from the active spoke.
+const sourceMoveTip=moveTip;
+moveTip=function(event){
+ const spoke=event.target?.closest?.('.wheel-spoke'),wheel=spoke?.closest('svg.wheel');
+ tip.classList.toggle('wheel-tip',!!wheel);
+ if(!wheel){sourceMoveTip(event);return}
+ tip.style.opacity=1;
+ const bounds=wheel.getBoundingClientRect(),active=spoke.getBoundingClientRect(),gap=18,margin=8;
+ const focus=event.type==='focus'||event.type==='focusin';
+ const x=focus?(active.left+active.right)/2:(event.clientX??(active.left+active.right)/2);
+ const y=focus?(active.top+active.bottom)/2:(event.clientY??(active.top+active.bottom)/2);
+ const width=tip.offsetWidth,height=tip.offsetHeight;
+ const clampX=value=>Math.max(margin,Math.min(innerWidth-width-margin,value));
+ const clampY=value=>Math.max(margin,Math.min(innerHeight-height-margin,value));
+ const candidates=[
+  {x:bounds.left-gap-width,y:clampY(y-height/2)},
+  {x:bounds.right+gap,y:clampY(y-height/2)},
+  {x:clampX(x-width/2),y:bounds.top-gap-height},
+  {x:clampX(x-width/2),y:bounds.bottom+gap},
+ ];
+ let position=candidates.find(p=>p.x>=margin&&p.y>=margin&&p.x+width<=innerWidth-margin&&p.y+height<=innerHeight-margin);
+ if(!position){
+  const overlap=(p,r)=>Math.max(0,Math.min(p.x+width,r.right)-Math.max(p.x,r.left))*Math.max(0,Math.min(p.y+height,r.bottom)-Math.max(p.y,r.top));
+  const pointer={left:x-24,right:x+24,top:y-24,bottom:y+24};
+  const options=[...candidates,{x:active.left-gap-width,y:y-height/2},{x:active.right+gap,y:y-height/2},{x:x-width/2,y:active.top-gap-height},{x:x-width/2,y:active.bottom+gap},
+   {x:x+gap,y:y+gap},{x:x-width-gap,y:y-height-gap},{x:x+gap,y:y-height-gap},{x:x-width-gap,y:y+gap}].map(p=>({x:clampX(p.x),y:clampY(p.y)}));
+  const score=p=>(overlap(p,pointer)>0?1e9:0)+overlap(p,active)*100+overlap(p,bounds);
+  position=options.reduce((best,p)=>score(p)<score(best)?p:best);
+ }
+ tip.style.left=position.x+'px';tip.style.top=position.y+'px';
+};
+
 let sidebarOpened=false;
 DATA.story_wheel_locked=!!DATA.progressive_associations;
 document.body.classList.toggle('standalone-atlas',window.parent===window);

@@ -148,6 +148,9 @@ const NS='http://www.w3.org/2000/svg',S=1000,BASE_NODE_OPACITY=1;'''
     if camera_source not in template:raise ValueError('Glyph camera changed; review the atlas bounds')
     template=template.replace(camera_source,camera_bounded)
     template=template.replace('const next=Math.max(.5,Math.min(15,scale*factor));','const next=Math.max(ATLAS_MIN_ZOOM,Math.min(ATLAS_MAX_ZOOM,scale*factor));')
+    # Custom wheel tooltips replace the browser's SVG title popups.
+    template=template.replace('<title>${escapeHTML(a.outcome)} · OR ${formatOR(a.odds_ratio)} · Bonferroni p ${formatP(a.corrected_p_value)}</title>','')
+    template=template.replace('<title>${escapeHTML(name)}</title>','')
     style=(ROOT/'scripts/atlas-theme.css').read_text()
     adapter=(ROOT/'scripts/atlas-adapter.js').read_text()
     html=template.replace('__GLYPH_DATA__',packed)
