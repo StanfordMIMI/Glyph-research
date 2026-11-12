@@ -160,6 +160,7 @@ renderSelected=function(){sourceRenderSelected();simplifyConceptSummary();compac
 let cameraTravelFrame=null,scrollCameraFrame=null,scrollCameraTarget=null,scrollCameraLastTime=0;
 function cancelGuidedCamera(){if(cameraTravelFrame!==null)cancelAnimationFrame(cameraTravelFrame);if(scrollCameraFrame!==null)cancelAnimationFrame(scrollCameraFrame);cameraTravelFrame=null;scrollCameraFrame=null;scrollCameraTarget=null}
 function travelCamera(target,duration=1050){
+ target=constrainCameraPose(target);
  cancelGuidedCamera();
  if(matchMedia('(prefers-reduced-motion: reduce)').matches){scale=target.scale;tx=target.tx;ty=target.ty;apply();updateConceptMarker(selectedNode);return}
  const initial={scale,tx,ty};
@@ -214,7 +215,9 @@ function setScrollCamera(fromConcept,toConcept,progress){
  const from=pose(fromConcept),to=pose(toConcept),t=Math.max(0,Math.min(1,progress)),ease=t*t*(3-2*t);
  if(fromConcept||toConcept&&t>0){guidedPanelTarget=Math.max(guidedPanelTarget,fromConcept?1:ease);if(!guidedPanelOwned)applyGuidedPanel(guidedPanelFraction)}
 
- scrollCameraTarget={scale:Math.exp(Math.log(from.scale)+(Math.log(to.scale)-Math.log(from.scale))*ease),x:from.x+(to.x-from.x)*ease,y:from.y+(to.y-from.y)*ease};
+ const targetScale=Math.exp(Math.log(from.scale)+(Math.log(to.scale)-Math.log(from.scale))*ease);
+ const bounded=constrainCameraPose({scale:targetScale,tx:S/2-(from.x+(to.x-from.x)*ease)*targetScale,ty:S/2-(from.y+(to.y-from.y)*ease)*targetScale});
+ scrollCameraTarget={scale:bounded.scale,x:(S/2-bounded.tx)/bounded.scale,y:(S/2-bounded.ty)/bounded.scale};
  reportCameraOverview(scrollCameraTarget.scale===1&&Math.abs(scale-1)<.00015&&Math.hypot((S/2-tx)/scale-S/2,(S/2-ty)/scale-S/2)<.04);
  if(scrollCameraFrame!==null)return;
  scrollCameraLastTime=performance.now();

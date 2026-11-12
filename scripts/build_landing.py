@@ -142,6 +142,12 @@ const NS='http://www.w3.org/2000/svg',S=1000,BASE_NODE_OPACITY=1;'''
     template=template.replace('selected.clear();selected.add(DATA.initial_outcome);','selected.clear();')
     template=template.replace('${DATA.nodes.length.toLocaleString()} concepts · ${hits.toLocaleString()}', '${DATA.nodes.length.toLocaleString()} nodes · ${hits.toLocaleString()}')
     template=template.replace("if(isSimple)return;activeRankSort=sortOutcome;", "if(isSimple)return;activeRankSort=sortOutcome;")
+    # Enforce the same limits for wheel, button, drag and guided cameras.
+    camera_source="const apply=()=>camera.setAttribute('transform',`translate(${tx},${ty}) scale(${scale})`);"
+    camera_bounded="// Keep every camera path inside the original fitted presentation.\nconst ATLAS_MIN_ZOOM=1,ATLAS_MAX_ZOOM=4;\nfunction constrainCameraPose(view){\n const k=Math.max(ATLAS_MIN_ZOOM,Math.min(ATLAS_MAX_ZOOM,Number.isFinite(view.scale)?view.scale:1));\n const lower=S*(1-k),clampPan=value=>Math.max(lower,Math.min(0,Number.isFinite(value)?value:0));\n return {scale:k,tx:clampPan(view.tx),ty:clampPan(view.ty)};\n}\nconst apply=()=>{\n ({scale,tx,ty}=constrainCameraPose({scale,tx,ty}));\n camera.setAttribute('transform',`translate(${tx},${ty}) scale(${scale})`);\n document.getElementById('zoomIn').disabled=scale>=ATLAS_MAX_ZOOM;\n document.getElementById('zoomOut').disabled=scale<=ATLAS_MIN_ZOOM;\n};\napply();"
+    if camera_source not in template:raise ValueError('Glyph camera changed; review the atlas bounds')
+    template=template.replace(camera_source,camera_bounded)
+    template=template.replace('const next=Math.max(.5,Math.min(15,scale*factor));','const next=Math.max(ATLAS_MIN_ZOOM,Math.min(ATLAS_MAX_ZOOM,scale*factor));')
     style=(ROOT/'scripts/atlas-theme.css').read_text()
     adapter=(ROOT/'scripts/atlas-adapter.js').read_text()
     html=template.replace('__GLYPH_DATA__',packed)

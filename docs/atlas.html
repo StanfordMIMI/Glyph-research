@@ -466,9 +466,22 @@ function applyFilters(){
 }
 document.getElementById('search').oninput=applyFilters;
 let scale=1,tx=0,ty=0,drag=null,moved=0;
-const apply=()=>camera.setAttribute('transform',`translate(${tx},${ty}) scale(${scale})`);
+// Keep every camera path inside the original fitted presentation.
+const ATLAS_MIN_ZOOM=1,ATLAS_MAX_ZOOM=4;
+function constrainCameraPose(view){
+ const k=Math.max(ATLAS_MIN_ZOOM,Math.min(ATLAS_MAX_ZOOM,Number.isFinite(view.scale)?view.scale:1));
+ const lower=S*(1-k),clampPan=value=>Math.max(lower,Math.min(0,Number.isFinite(value)?value:0));
+ return {scale:k,tx:clampPan(view.tx),ty:clampPan(view.ty)};
+}
+const apply=()=>{
+ ({scale,tx,ty}=constrainCameraPose({scale,tx,ty}));
+ camera.setAttribute('transform',`translate(${tx},${ty}) scale(${scale})`);
+ document.getElementById('zoomIn').disabled=scale>=ATLAS_MAX_ZOOM;
+ document.getElementById('zoomOut').disabled=scale<=ATLAS_MIN_ZOOM;
+};
+apply();
 function svgPoint(e){const point=svg.createSVGPoint();point.x=e.clientX;point.y=e.clientY;return point.matrixTransform(svg.getScreenCTM().inverse())}
-function zoomAt(point,factor){const next=Math.max(.5,Math.min(15,scale*factor));tx=point.x-(point.x-tx)*next/scale;ty=point.y-(point.y-ty)*next/scale;scale=next;apply()}
+function zoomAt(point,factor){const next=Math.max(ATLAS_MIN_ZOOM,Math.min(ATLAS_MAX_ZOOM,scale*factor));tx=point.x-(point.x-tx)*next/scale;ty=point.y-(point.y-ty)*next/scale;scale=next;apply()}
 let pendingZoom=null,zoomFrame=null;
 svg.addEventListener('wheel',e=>{
  if((DATA.guided_mode||DATA.story_wheel_locked)&&!e.ctrlKey&&!e.metaKey){e.preventDefault();tip.style.opacity=0;if(window.parent!==window)window.parent.postMessage({type:'glyph:scroll',deltaY:e.deltaY,deltaMode:e.deltaMode},'*');return}
@@ -674,6 +687,7 @@ renderSelected=function(){sourceRenderSelected();simplifyConceptSummary();compac
 let cameraTravelFrame=null,scrollCameraFrame=null,scrollCameraTarget=null,scrollCameraLastTime=0;
 function cancelGuidedCamera(){if(cameraTravelFrame!==null)cancelAnimationFrame(cameraTravelFrame);if(scrollCameraFrame!==null)cancelAnimationFrame(scrollCameraFrame);cameraTravelFrame=null;scrollCameraFrame=null;scrollCameraTarget=null}
 function travelCamera(target,duration=1050){
+ target=constrainCameraPose(target);
  cancelGuidedCamera();
  if(matchMedia('(prefers-reduced-motion: reduce)').matches){scale=target.scale;tx=target.tx;ty=target.ty;apply();updateConceptMarker(selectedNode);return}
  const initial={scale,tx,ty};
@@ -728,7 +742,9 @@ function setScrollCamera(fromConcept,toConcept,progress){
  const from=pose(fromConcept),to=pose(toConcept),t=Math.max(0,Math.min(1,progress)),ease=t*t*(3-2*t);
  if(fromConcept||toConcept&&t>0){guidedPanelTarget=Math.max(guidedPanelTarget,fromConcept?1:ease);if(!guidedPanelOwned)applyGuidedPanel(guidedPanelFraction)}
 
- scrollCameraTarget={scale:Math.exp(Math.log(from.scale)+(Math.log(to.scale)-Math.log(from.scale))*ease),x:from.x+(to.x-from.x)*ease,y:from.y+(to.y-from.y)*ease};
+ const targetScale=Math.exp(Math.log(from.scale)+(Math.log(to.scale)-Math.log(from.scale))*ease);
+ const bounded=constrainCameraPose({scale:targetScale,tx:S/2-(from.x+(to.x-from.x)*ease)*targetScale,ty:S/2-(from.y+(to.y-from.y)*ease)*targetScale});
+ scrollCameraTarget={scale:bounded.scale,x:(S/2-bounded.tx)/bounded.scale,y:(S/2-bounded.ty)/bounded.scale};
  reportCameraOverview(scrollCameraTarget.scale===1&&Math.abs(scale-1)<.00015&&Math.hypot((S/2-tx)/scale-S/2,(S/2-ty)/scale-S/2)<.04);
  if(scrollCameraFrame!==null)return;
  scrollCameraLastTime=performance.now();
