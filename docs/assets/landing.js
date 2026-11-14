@@ -13,10 +13,26 @@ function syncMobileCaption(){
  if(!phoneStory.matches)return;
  const step=storySteps[activeStory];mobileCaption.innerHTML=step.querySelector('.story-step-copy').innerHTML;
  mobileCaption.style.setProperty('--story-accent',step.style.getPropertyValue('--story-accent'));mobileCaption.scrollTop=0;
+ // Keep the main narration readable; optional supporting detail stays available.
+ const extras=[...mobileCaption.children].filter(el=>el.matches('.story-prompt,.step-label,.story-marker-results'));
+ mobileCaption.classList.toggle('has-details',extras.length>0);
+ if(extras.length){const more=document.createElement('details'),summary=document.createElement('summary');more.className='mobile-story-more';summary.textContent='Concepts and statistics';more.appendChild(summary);extras.forEach(el=>more.appendChild(el));mobileCaption.appendChild(more)}
 }
-phoneStory.addEventListener('change',syncMobileCaption);
+function syncPhoneLayout(){
+ const controls=document.querySelector('.network-controls'),shortcuts=controls.querySelector('.outcome-shortcuts');
+ let rail=shortcuts.querySelector('.phone-outcome-shortcuts');
+ if(phoneStory.matches){
+  controls.before(mobileCaption);
+  if(!rail){rail=document.createElement('div');rail.className='phone-outcome-shortcuts';rail.setAttribute('role','group');rail.setAttribute('aria-label','Choose a disease');shortcuts.appendChild(rail);['show-liver-cancer','show-cardiac','show-renal','show-all-outcomes'].forEach(id=>rail.appendChild(document.getElementById(id)))}
+ }else{
+  controls.after(mobileCaption);
+  if(rail){while(rail.firstChild)shortcuts.insertBefore(rail.firstChild,rail);rail.remove()}
+ }
+ syncMobileCaption();send({type:'glyph:mobile-layout'});
+}
+phoneStory.addEventListener('change',syncPhoneLayout);
 
-function send(message){frame.contentWindow?.postMessage(message,'*')}
+function send(message){frame.contentWindow?.postMessage({...message,mobileLayout:phoneStory.matches},'*')}
 function syncMode(mode){modeButtons.forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.mode===mode)))}
 function resumeStoryScroll(){
  if(!storyWheelLocked||storyCompleted||guidedEnabled)return;
@@ -226,3 +242,8 @@ window.addEventListener('message',event=>{
 });
 document.addEventListener('click',event=>{if(!event.target.closest('.atlas-search-wrap')){atlasResults.hidden=true;atlasSearch.setAttribute('aria-expanded','false')}});
 atlasSearch.addEventListener('keydown',event=>{if(event.key==='Escape'){atlasResults.hidden=true;atlasSearch.setAttribute('aria-expanded','false')}if(event.key==='ArrowDown'){event.preventDefault();atlasResults.querySelector('button')?.focus()}});
+
+syncPhoneLayout();
+
+// Recover state if a cached iframe finished before this deferred script ran.
+send({type:'glyph:request-state'});

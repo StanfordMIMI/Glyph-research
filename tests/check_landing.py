@@ -7,6 +7,7 @@ import csv
 from functools import partial
 from http.server import SimpleHTTPRequestHandler,ThreadingHTTPServer
 import json
+import os
 from pathlib import Path
 import threading
 
@@ -42,7 +43,7 @@ def check():
     errors=[];external=[];checks=[]
     try:
         with sync_playwright() as p:
-            browser=p.chromium.launch(headless=True,args=['--no-sandbox','--disable-dev-shm-usage'])
+            browser=p.chromium.launch(headless=True,args=['--no-sandbox','--disable-dev-shm-usage'],executable_path=os.environ.get('GLYPH_CHROMIUM_EXECUTABLE'))
             context=browser.new_context(viewport={'width':1512,'height':1080},device_scale_factor=1,accept_downloads=True)
             page=context.new_page();page.on('pageerror',lambda error:errors.append(str(error)))
             page.on('request',lambda req:external.append(req.url) if not req.url.startswith((url,'data:','blob:')) else None)
@@ -326,11 +327,11 @@ def check():
             frame.wait_for_function('(name)=>selectedNode?.name===name',arg=concept)
             assert frame.locator('#selectedConceptMarker').get_attribute('data-concept')==concept
             assert frame.evaluate('scale===2.2')
-            assert frame.evaluate('Math.abs(selectedNode.x*S*scale+tx-S/2)<1e-8 && Math.abs(selectedNode.y*S*scale+ty-S/2)<1e-8')
+            assert frame.evaluate('''() => {const goal=constrainCameraPose({scale:2.2,tx:S/2-selectedNode.x*S*2.2,ty:S/2-selectedNode.y*S*2.2});return Math.abs(tx-goal.tx)<1e-8 && Math.abs(ty-goal.ty)<1e-8}''')
             page.locator('#atlas-reset').click()
             frame.wait_for_function('!selectedNode && scale===1 && tx===0 && ty===0 && selected.size===0')
             assert not frame.locator('#selectedConceptMarker').is_visible()
-            checks.append('Timeline jump centers and zooms to the concept, shows ID and selection ring; reset clears highlight')
+            checks.append('Timeline jump focuses the concept within camera bounds, shows ID and selection ring; reset clears highlight')
             about=context.new_page();about.on('pageerror',lambda error:errors.append(str(error)))
             about.goto(url+'about.html')
             assert about.locator('.study-section').count()==1
@@ -435,10 +436,31 @@ def check():
             assert not page.locator('#mobile-story-caption').is_visible()
             checks.append('Phone narration stays below the full-width network; desktop retains its left story column')
 
-            m.locator('#atlas').scroll_into_view_if_needed();m.locator('#choose-diseases').click()
+            # Guided close-ups retain the full graph height on a phone; no
+            # invisible sidebar row is allowed to take half of the iframe.
+            app_box=mf.locator('#app').bounding_box();stage_box=mf.locator('#stage').bounding_box()
+            assert stage_box['height']>=app_box['height']-2
+            assert caption.locator('summary').inner_text()=='Concepts and statistics'
+            caption.locator('summary').click()
+            assert caption.locator('.story-marker').count()==3
+            caption.locator('summary').click()
+            # Use real touch events inside the iframe, not synthetic page scroll.
+            graph_box=m.locator('#concept-atlas').bounding_box()
+            x=graph_box['x']+graph_box['width']*.5;y=graph_box['y']+graph_box['height']*.7
+            before_swipe=m.evaluate('scrollY');touch=mobile.new_cdp_session(m)
+            touch.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':x,'y':y}]})
+            for delta in (20,40,60,80,100):
+                touch.send('Input.dispatchTouchEvent',{'type':'touchMove','touchPoints':[{'x':x,'y':y-delta}]})
+                m.wait_for_timeout(20)
+            touch.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
+            m.wait_for_function('y=>scrollY>y+30',arg=before_swipe)
+            checks.append('Real phone swipes over the iframe advance the story; optional statistics remain available')
+            m.locator('#show-all-outcomes').click()
             mf.locator('#outcomePicker[open]>.outcomes').wait_for()
             assert mf.locator('#outcomePicker').get_attribute('open') is not None
-            m.locator('#choose-diseases').click()
+            picker_box=mf.locator('#outcomePicker>.outcomes').bounding_box()
+            assert picker_box['x']>=0 and picker_box['x']+picker_box['width']<=graph_box['width']+1
+            m.locator('#show-all-outcomes').click()
             m.screenshot(path=str(ARTIFACTS/'mobile-atlas.png'))
             m.screenshot(path=str(ARTIFACTS/'mobile-full.png'),full_page=True)
             checks.append('390px mobile layout, no horizontal overflow, working disease picker')

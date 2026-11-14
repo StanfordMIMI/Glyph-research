@@ -187,3 +187,24 @@ button,input,summary{font-size:14px}
 #tip.wheel-tip{max-width:min(300px,calc(100vw - 16px));font-size:13px;line-height:1.35}
 #tip.wheel-tip>b:first-child{display:block;font-size:15px;line-height:1.3;margin-bottom:4px}
 #tip.wheel-tip dl{font-size:13px;line-height:1.35}
+
+/* Phone embed: full-width details, touch-sized controls and a legible legend. */
+@media(max-width:850px){
+ .parent-controls.phone-layout .legend{left:12px;right:58px;top:6px;max-width:none!important;font-size:12px!important;line-height:1.4}
+ .parent-controls.phone-layout .legend .legend-item{font-size:11px}
+ .parent-controls.phone-layout #zoomControls{right:8px;bottom:10px;gap:6px}
+ .parent-controls.phone-layout #zoomControls button{width:40px;height:40px;font-size:22px;padding:5px}
+ .parent-controls.phone-layout:not(.guided-view) #app.has-selection{grid-template-columns:1fr!important;grid-template-rows:38% minmax(0,1fr)!important}
+ .parent-controls.phone-layout #side{min-width:0;padding:12px 15px!important;overscroll-behavior:contain}
+ .parent-controls.phone-layout #detail .concept-heading .concept-code{font-size:23px}
+ .parent-controls.phone-layout #detail .concept-heading .concept-interpretation{font-size:16px}
+ .parent-controls.phone-layout #detail p{font-size:15px;line-height:1.5}
+ .parent-controls.phone-layout #detail .assoc{font-size:12px}
+ .parent-controls.phone-layout #detail .outcome-link{font-size:13px}
+ .parent-controls.phone-layout #outcomePicker>.outcomes{left:10px!important;right:10px!important;bottom:8px!important;top:auto!important;max-height:calc(100svh - 16px)!important;font-size:14px}
+ .parent-controls.phone-layout #outcomePicker .outcomes input[type=search]{font-size:16px}
+}
+
+@media(max-width:850px){
+ .parent-controls.phone-layout.guided-view #app.has-selection{grid-template-columns:1fr!important;grid-template-rows:1fr!important}
+}

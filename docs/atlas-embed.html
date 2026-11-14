@@ -249,7 +249,28 @@ button,input,summary{font-size:14px}
 </style><script defer src="assets/analytics.js"></script>
 <style>#tip.wheel-tip{max-width:min(300px,calc(100vw - 16px));font-size:13px;line-height:1.35}
 #tip.wheel-tip>b:first-child{display:block;font-size:15px;line-height:1.3;margin-bottom:4px}
-#tip.wheel-tip dl{font-size:13px;line-height:1.35}</style></head><body><div id="app"><main id="stage">
+#tip.wheel-tip dl{font-size:13px;line-height:1.35}</style><style>
+/* Phone embed: full-width details, touch-sized controls and a legible legend. */
+@media(max-width:850px){
+ .parent-controls.phone-layout .legend{left:12px;right:58px;top:6px;max-width:none!important;font-size:12px!important;line-height:1.4}
+ .parent-controls.phone-layout .legend .legend-item{font-size:11px}
+ .parent-controls.phone-layout #zoomControls{right:8px;bottom:10px;gap:6px}
+ .parent-controls.phone-layout #zoomControls button{width:40px;height:40px;font-size:22px;padding:5px}
+ .parent-controls.phone-layout:not(.guided-view) #app.has-selection{grid-template-columns:1fr!important;grid-template-rows:38% minmax(0,1fr)!important}
+ .parent-controls.phone-layout #side{min-width:0;padding:12px 15px!important;overscroll-behavior:contain}
+ .parent-controls.phone-layout #detail .concept-heading .concept-code{font-size:23px}
+ .parent-controls.phone-layout #detail .concept-heading .concept-interpretation{font-size:16px}
+ .parent-controls.phone-layout #detail p{font-size:15px;line-height:1.5}
+ .parent-controls.phone-layout #detail .assoc{font-size:12px}
+ .parent-controls.phone-layout #detail .outcome-link{font-size:13px}
+ .parent-controls.phone-layout #outcomePicker>.outcomes{left:10px!important;right:10px!important;bottom:8px!important;top:auto!important;max-height:calc(100svh - 16px)!important;font-size:14px}
+ .parent-controls.phone-layout #outcomePicker .outcomes input[type=search]{font-size:16px}
+}
+</style><style>
+@media(max-width:850px){
+ .parent-controls.phone-layout.guided-view #app.has-selection{grid-template-columns:1fr!important;grid-template-rows:1fr!important}
+}
+</style></head><body><div id="app"><main id="stage">
 <div id="toolbar"><details id="outcomePicker"><summary id="outcomeSummary">Outcomes</summary><div class="outcomes"><div class="picker-actions"><button id="selectAllOutcomes" type="button">Select all</button><button id="clearOutcomes" type="button">Clear</button></div><input id="outcomeSearch" type="search" aria-label="Find an outcome" placeholder="Find an outcome"><div id="outcomeChoices"></div></div></details><details id="contextPicker"><summary id="contextSummary">Context: all</summary><div class="outcomes" id="contextChoices"></div></details><details id="facetPicker"><summary>Modalities / families</summary><div class="outcomes" id="facetChoices"></div></details><details id="colorSettings"><summary id="colorSummary">Color: outcomes</summary><div class="outcomes"><b>Node color</b><label><input type="radio" name="colorMode" value="outcome" checked><span>Outcome associations</span></label><label><input type="radio" name="colorMode" value="modality"><span>Modality</span></label><p class="meta">Outcome mode uses the selected significant associations. Modality mode shows where each data source lives.</p></div></details><details id="displaySettings"><summary id="settingsSummary">Both directions · extreme 10% · min 5</summary><div class="outcomes"><b>Association direction</b><label><input type="radio" name="associationDirection" value="risk"><span>Risk (OR &gt; 1)</span></label><label><input type="radio" name="associationDirection" value="protective"><span>Protective (OR &lt; 1)</span></label><label><input type="radio" name="associationDirection" value="both" checked><span>Both directions</span></label><label><input id="extremeOnly" type="checkbox" checked><span>Most extreme 10% per direction (minimum 5)</span></label><p class="meta">Risk uses the highest odds ratios; protective uses the lowest. Ranking is recalculated within each outcome and the currently visible context.</p></div></details><input id="search" type="search" aria-label="Search concepts" placeholder="Search concepts">
 <button id="reset">Reset view</button><button id="tourButton">Tour</button></div>
 <svg id="graph" role="group" aria-label="Interactive concept network"><g id="camera"><g id="edgeLayer"></g><g id="nodeLayer"></g></g></svg>
@@ -878,6 +899,8 @@ document.addEventListener('keydown',event=>{
 svg.addEventListener('touchmove',()=>{if(DATA.story_wheel_locked&&!DATA.guided_mode)notifyParent('glyph:resume-story')},{passive:true});
 window.addEventListener('message',event=>{
  if(event.source!==window.parent)return;const m=event.data;
+ if(typeof m?.mobileLayout==='boolean')document.body.classList.toggle('phone-layout',m.mobileLayout);
+ if(m?.type==='glyph:request-state'){notifyParent('glyph:ready',{associationsReady:!DATA.progressive_associations||!!DATA.associations_ready});return}
  if(m?.type==='glyph:guided-mode'){if(typeof m.storyScroll==='boolean')DATA.story_wheel_locked=m.storyScroll;setGuidedMode(!!m.enabled);if(!m.enabled)cancelGuidedCamera()}
  if(m?.type==='glyph:select-outcome'){
   setGuidedMode(false);const outcome=DATA.outcomes.find(o=>o===m.outcome||o.endsWith('('+m.outcome+')'));
@@ -1036,4 +1059,26 @@ window.addEventListener('message',event=>{
  if(m?.type==='glyph:reset')resetAtlasView();
  if(m?.type==='glyph:help')document.getElementById('tourButton').click();
 });
+
+// A phone swipe over the embedded graph advances the page story. Native touch
+// scrolling cannot reliably cross this iframe boundary on mobile browsers.
+const phoneGraph=matchMedia('(max-width:850px)');let phoneSwipe=null;
+svg.addEventListener('pointerdown',event=>{
+ if(phoneGraph.matches&&document.body.classList.contains('phone-layout')&&window.parent!==window&&DATA.story_wheel_locked&&event.pointerType==='touch'){drag=null;event.stopImmediatePropagation()}
+},true);
+svg.addEventListener('touchstart',event=>{
+ phoneSwipe=phoneGraph.matches&&document.body.classList.contains('phone-layout')&&window.parent!==window&&DATA.story_wheel_locked&&event.touches.length===1?{y:event.touches[0].clientY,total:0}:null;
+ if(phoneSwipe)moved=0;
+},{passive:true});
+svg.addEventListener('touchmove',event=>{
+ if(!phoneSwipe||event.touches.length!==1||!DATA.story_wheel_locked){phoneSwipe=null;return}
+ const y=event.touches[0].clientY,delta=phoneSwipe.y-y;phoneSwipe.y=y;phoneSwipe.total+=Math.abs(delta);
+ if(phoneSwipe.total<6)return;
+ event.preventDefault();moved=10;tip.style.opacity=0;
+ notifyParent('glyph:scroll',{deltaY:delta,deltaMode:0});
+},{passive:false});
+svg.addEventListener('touchend',()=>{phoneSwipe=null},{passive:true});
+svg.addEventListener('touchcancel',()=>{phoneSwipe=null},{passive:true});
+
+phoneGraph.addEventListener('change',()=>{if(document.body.classList.contains('phone-layout')&&DATA.guided_mode&&guidedPanelOwned)applyGuidedPanel(guidedPanelFraction)});
 </script><script defer src="assets/progressive-associations.js"></script></body></html>

@@ -349,6 +349,8 @@ document.addEventListener('keydown',event=>{
 svg.addEventListener('touchmove',()=>{if(DATA.story_wheel_locked&&!DATA.guided_mode)notifyParent('glyph:resume-story')},{passive:true});
 window.addEventListener('message',event=>{
  if(event.source!==window.parent)return;const m=event.data;
+ if(typeof m?.mobileLayout==='boolean')document.body.classList.toggle('phone-layout',m.mobileLayout);
+ if(m?.type==='glyph:request-state'){notifyParent('glyph:ready',{associationsReady:!DATA.progressive_associations||!!DATA.associations_ready});return}
  if(m?.type==='glyph:guided-mode'){if(typeof m.storyScroll==='boolean')DATA.story_wheel_locked=m.storyScroll;setGuidedMode(!!m.enabled);if(!m.enabled)cancelGuidedCamera()}
  if(m?.type==='glyph:select-outcome'){
   setGuidedMode(false);const outcome=DATA.outcomes.find(o=>o===m.outcome||o.endsWith('('+m.outcome+')'));
@@ -507,3 +509,25 @@ window.addEventListener('message',event=>{
  if(m?.type==='glyph:reset')resetAtlasView();
  if(m?.type==='glyph:help')document.getElementById('tourButton').click();
 });
+
+// A phone swipe over the embedded graph advances the page story. Native touch
+// scrolling cannot reliably cross this iframe boundary on mobile browsers.
+const phoneGraph=matchMedia('(max-width:850px)');let phoneSwipe=null;
+svg.addEventListener('pointerdown',event=>{
+ if(phoneGraph.matches&&document.body.classList.contains('phone-layout')&&window.parent!==window&&DATA.story_wheel_locked&&event.pointerType==='touch'){drag=null;event.stopImmediatePropagation()}
+},true);
+svg.addEventListener('touchstart',event=>{
+ phoneSwipe=phoneGraph.matches&&document.body.classList.contains('phone-layout')&&window.parent!==window&&DATA.story_wheel_locked&&event.touches.length===1?{y:event.touches[0].clientY,total:0}:null;
+ if(phoneSwipe)moved=0;
+},{passive:true});
+svg.addEventListener('touchmove',event=>{
+ if(!phoneSwipe||event.touches.length!==1||!DATA.story_wheel_locked){phoneSwipe=null;return}
+ const y=event.touches[0].clientY,delta=phoneSwipe.y-y;phoneSwipe.y=y;phoneSwipe.total+=Math.abs(delta);
+ if(phoneSwipe.total<6)return;
+ event.preventDefault();moved=10;tip.style.opacity=0;
+ notifyParent('glyph:scroll',{deltaY:delta,deltaMode:0});
+},{passive:false});
+svg.addEventListener('touchend',()=>{phoneSwipe=null},{passive:true});
+svg.addEventListener('touchcancel',()=>{phoneSwipe=null},{passive:true});
+
+phoneGraph.addEventListener('change',()=>{if(document.body.classList.contains('phone-layout')&&DATA.guided_mode&&guidedPanelOwned)applyGuidedPanel(guidedPanelFraction)});
